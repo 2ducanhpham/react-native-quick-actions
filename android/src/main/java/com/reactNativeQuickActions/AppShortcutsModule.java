@@ -69,6 +69,10 @@ class AppShortcutsModule extends ReactContextBaseJavaModule {
                     if (bundle != null) {
                         ShortcutItem item = ShortcutItem.fromPersistableBundle(bundle);
                         map = item.toWritableMap();
+
+                        // Xóa action để ngăn nó không bị gọi lại khi reload app
+                        intent.setAction(null);
+                        intent.removeExtra(SHORTCUT_ITEM);
                     }
                 }
             }
