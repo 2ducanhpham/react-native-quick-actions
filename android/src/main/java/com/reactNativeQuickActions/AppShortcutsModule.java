@@ -82,37 +82,32 @@ class AppShortcutsModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     @TargetApi(25)
-    public void setShortcutItems(ReadableArray items) {
-        if (!isShortcutSupported() || items.size() == 0) {
-            return;
+    public void popInitialAction(Promise promise) {
+        try {
+            Activity currentActivity = getCurrentActivity();
+            WritableMap map = null;
+
+            if (currentActivity != null) {
+                Intent intent = currentActivity.getIntent();
+
+                if (ACTION_SHORTCUT.equals(intent.getAction())) {
+                    PersistableBundle bundle = intent.getParcelableExtra(SHORTCUT_ITEM);
+                    if (bundle != null) {
+                        ShortcutItem item = ShortcutItem.fromPersistableBundle(bundle);
+                        map = item.toWritableMap();
+
+                        // Xóa action để ngăn nó không bị gọi lại khi reload app
+                        intent.setAction(null);
+                        intent.removeExtra(SHORTCUT_ITEM);
+                    }
+                }
+            }
+
+            promise.resolve(map);
+        } catch (Exception e) {
+            promise.reject(new JSApplicationIllegalArgumentException(
+                    "AppShortcuts.popInitialAction error. " + e.getMessage()));
         }
-
-        Activity currentActivity = getCurrentActivity();
-        if (currentActivity == null) {
-            return;
-        }
-
-        Context context = getReactApplicationContext();
-        List<ShortcutInfo> shortcuts = new ArrayList<>(items.size());
-
-        for (int i = 0; i < items.size(); i++) {
-            ShortcutItem item = ShortcutItem.fromReadableMap(items.getMap(i));
-
-            int iconResId = context.getResources()
-                    .getIdentifier(item.icon, "drawable", context.getPackageName());
-            Intent intent = new Intent(context, currentActivity.getClass());
-            intent.setAction(ACTION_SHORTCUT);
-            intent.putExtra(SHORTCUT_ITEM, item.toPersistableBundle());
-
-            shortcuts.add(new ShortcutInfo.Builder(context, "id" + i)
-                    .setShortLabel(item.title)
-                    .setLongLabel(item.title)
-                    .setIcon(Icon.createWithResource(context, iconResId))
-                    .setIntent(intent)
-                    .build());
-        }
-
-        getReactApplicationContext().getSystemService(ShortcutManager.class).setDynamicShortcuts(shortcuts);
     }
 
     @ReactMethod
